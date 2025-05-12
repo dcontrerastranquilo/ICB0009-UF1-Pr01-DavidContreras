@@ -11,6 +11,9 @@ namespace SimuladorEnvioRecepcion
         static string UserName;
         static byte[] SecurePassHash;
         static byte[] Salt;
+        static byte[] Firma;
+        static byte[] ClaveSimetricaKeyCifrada;
+        static byte[] ClaveSimetricaIVCifrada;
 
         static ClaveAsimetrica Emisor = new ClaveAsimetrica();
         static ClaveAsimetrica Receptor = new ClaveAsimetrica();
@@ -40,21 +43,45 @@ namespace SimuladorEnvioRecepcion
                 byte[] TextoAEnviar_Bytes = Encoding.UTF8.GetBytes(TextoAEnviar);
                 Console.WriteLine("Texto a enviar bytes: {0}", BytesToStringHex(TextoAEnviar_Bytes));
 
-                // LADO EMISOR
+                // ------------------ LADO EMISOR ------------------
 
-                // Firmar mensaje
+                // 1. Firmar mensaje
+                Firma = Emisor.FirmarMensaje(TextoAEnviar_Bytes);
 
-                // Cifrar mensaje con la clave simétrica
+                // 2. Cifrar mensaje con clave simétrica
+                byte[] TextoCifrado = ClaveSimetricaEmisor.CifrarMensaje(TextoAEnviar);
 
-                // Cifrar clave simétrica con la clave pública del receptor
+                // 3. Cifrar clave simétrica con clave pública del receptor
+                ClaveSimetricaKeyCifrada = Emisor.CifrarMensaje(ClaveSimetricaEmisor.Key, Receptor.PublicKey);
+                ClaveSimetricaIVCifrada = Emisor.CifrarMensaje(ClaveSimetricaEmisor.IV, Receptor.PublicKey);
 
-                // LADO RECEPTOR
+                // Mostrar datos enviados
+                Console.WriteLine("\n--- DATOS ENVIADOS ---");
+                Console.WriteLine("Firma: {0}", BytesToStringHex(Firma));
+                Console.WriteLine("Texto cifrado: {0}", BytesToStringHex(TextoCifrado));
+                Console.WriteLine("Clave simétrica cifrada (Key): {0}", BytesToStringHex(ClaveSimetricaKeyCifrada));
+                Console.WriteLine("Clave simétrica cifrada (IV): {0}", BytesToStringHex(ClaveSimetricaIVCifrada));
 
-                // Descifrar clave simétrica
+                // ------------------ LADO RECEPTOR ------------------
 
-                // Descifrar mensaje con la clave simétrica
+                // 4. Descifrar clave e IV
+                byte[] ClaveSimetricaKey = Receptor.DescifrarMensaje(ClaveSimetricaKeyCifrada);
+                byte[] ClaveSimetricaIV = Receptor.DescifrarMensaje(ClaveSimetricaIVCifrada);
 
-                // Comprobar firma
+                ClaveSimetricaReceptor.Key = ClaveSimetricaKey;
+                ClaveSimetricaReceptor.IV = ClaveSimetricaIV;
+
+                // 5. Descifrar mensaje
+                string TextoDescifrado = ClaveSimetricaReceptor.DescifrarMensaje(TextoCifrado);
+                byte[] TextoDescifradoBytes = Encoding.UTF8.GetBytes(TextoDescifrado);
+
+                // 6. Comprobar firma
+                bool firmaCorrecta = Receptor.ComprobarFirma(Firma, TextoDescifradoBytes, Emisor.PublicKey);
+
+                // Mostrar resultados
+                Console.WriteLine("\n--- RECEPCIÓN ---");
+                Console.WriteLine("Texto descifrado: {0}", TextoDescifrado);
+                Console.WriteLine("Firma válida: {0}", firmaCorrecta);
             }
         }
 
@@ -66,14 +93,14 @@ namespace SimuladorEnvioRecepcion
             Console.WriteLine("Indica tu password:");
             string passwordRegister = Console.ReadLine();
 
-            // Generar salt aleatorio
+            // SALT
             Salt = new byte[16];
             using (var rng = new RNGCryptoServiceProvider())
             {
                 rng.GetBytes(Salt);
             }
 
-            // Hashear password + salt con SHA512
+            // HASH + SALT
             using (SHA512 sha512 = SHA512.Create())
             {
                 byte[] passwordBytes = Encoding.UTF8.GetBytes(passwordRegister);
