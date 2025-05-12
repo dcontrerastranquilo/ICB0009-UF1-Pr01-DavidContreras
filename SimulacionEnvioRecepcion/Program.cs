@@ -45,17 +45,17 @@ namespace SimuladorEnvioRecepcion
 
                 // ------------------ LADO EMISOR ------------------
 
-                // 1. Firmar mensaje
+                // Firmar mensaje
                 Firma = Emisor.FirmarMensaje(TextoAEnviar_Bytes);
 
-                // 2. Cifrar mensaje con clave simétrica
+                // Cifrar mensaje con clave simétrica
                 byte[] TextoCifrado = ClaveSimetricaEmisor.CifrarMensaje(TextoAEnviar);
 
-                // 3. Cifrar clave simétrica con clave pública del receptor
+                // Cifrar clave simétrica con clave pública del receptor
                 ClaveSimetricaKeyCifrada = Emisor.CifrarMensaje(ClaveSimetricaEmisor.Key, Receptor.PublicKey);
                 ClaveSimetricaIVCifrada = Emisor.CifrarMensaje(ClaveSimetricaEmisor.IV, Receptor.PublicKey);
 
-                // Mostrar datos enviados
+                // Mostrar datos
                 Console.WriteLine("\n--- DATOS ENVIADOS ---");
                 Console.WriteLine("Firma: {0}", BytesToStringHex(Firma));
                 Console.WriteLine("Texto cifrado: {0}", BytesToStringHex(TextoCifrado));
@@ -64,18 +64,18 @@ namespace SimuladorEnvioRecepcion
 
                 // ------------------ LADO RECEPTOR ------------------
 
-                // 4. Descifrar clave e IV
+                // Descifrar clave e IV
                 byte[] ClaveSimetricaKey = Receptor.DescifrarMensaje(ClaveSimetricaKeyCifrada);
                 byte[] ClaveSimetricaIV = Receptor.DescifrarMensaje(ClaveSimetricaIVCifrada);
 
                 ClaveSimetricaReceptor.Key = ClaveSimetricaKey;
                 ClaveSimetricaReceptor.IV = ClaveSimetricaIV;
 
-                // 5. Descifrar mensaje
+                //Descifrar mensaje
                 string TextoDescifrado = ClaveSimetricaReceptor.DescifrarMensaje(TextoCifrado);
                 byte[] TextoDescifradoBytes = Encoding.UTF8.GetBytes(TextoDescifrado);
 
-                // 6. Comprobar firma
+                //Comprobar firma
                 bool firmaCorrecta = Receptor.ComprobarFirma(Firma, TextoDescifradoBytes, Emisor.PublicKey);
 
                 // Mostrar resultados
